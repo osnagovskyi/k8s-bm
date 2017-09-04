@@ -1,0 +1,9 @@
+[coreos]
+207.154.243.211
+207.154.223.3
+138.68.109.225
+
+[coreos:vars]
+coreos_ansible_role_path="{{playbook_dir}}"
+ansible_ssh_user=core
+ansible_python_interpreter="/opt/python/bin/python"
