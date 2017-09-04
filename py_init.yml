@@ -1,0 +1,9 @@
+---
+- name: coreos-ansible
+  hosts: coreos
+  user: core
+  become: yes
+  gather_facts: False
+  serial: 1
+  roles:
+    - ansible-coreos-ansible
