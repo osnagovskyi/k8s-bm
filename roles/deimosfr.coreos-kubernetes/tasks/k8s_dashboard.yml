@@ -1,0 +1,27 @@
+---
+
+# Better method but SSL is not yet supported on kubernetes module in Ansible v2.2
+#- name: create k8s Dashboard service and replication controller
+#  kubernetes:
+#    api_endpoint: "{{ groups['k8s-workers'] | map('extract', hostvars, ['priv_ip']) | list | random }}"
+#    inline_data: "{{item}}"
+#    state: present
+#  with_items:
+#    - "{{k8s_dashboard_replication_controller}}"
+#    - "{{k8s_dashboard_service}}"
+
+- name: generate k8s Dashboard service and deployment files
+  template:
+    src: "{{k8s_template_dir}}/generate_yaml.j2"
+    dest: "/tmp/{{item.dest}}"
+    mode: 0644
+  with_items:
+    - { yaml: "{{k8s_dashboard_deployment}}", dest: 'kube-dashboard-deploy.yaml' }
+    - { yaml: "{{k8s_dashboard_service}}", dest: 'kube-dashboard-svc.yaml' }
+
+- name: create k8s Dashboard service and deployment
+  command: "{{item}}"
+  with_items:
+    - "/opt/bin/kubectl apply -f /tmp/kube-dashboard-deploy.yaml"
+    - "/opt/bin/kubectl apply -f /tmp/kube-dashboard-svc.yaml"
+  changed_when: false

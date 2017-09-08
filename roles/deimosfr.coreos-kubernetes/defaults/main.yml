@@ -1,0 +1,669 @@
+# https://quay.io/repository/coreos/hyperkube?tab=tags
+k8s_kubectl_version: 'v1.7.2'
+k8s_version: "{{k8s_kubectl_version}}_coreos.0"
+# https://console.cloud.google.com/gcr/images/google-containers/GLOBAL/kubernetes-dashboard-amd64?pli=1
+k8s_dashboard_version: '1.6.2'
+
+k8s_heapster_version: 'v1.4.0'
+
+# Master host will ideally be a network load balancer that sits in front of
+# them. Alternatively, a DNS name can be configured which will resolve to
+# the master IPs
+k8s_master_host: 'core01.toolsthatmatter.com'
+k8s_etcd_endpoints: "http://{{ groups['k8s-masters'] | map('extract', hostvars, ['priv_ip']) | join(':2379,http://') }}:2379"
+k8s_flanneld_subnet: "10.1.0.0/16"
+k8s_pod_network: '10.2.0.0/16'
+k8s_service_ip_range: '10.3.0.0/24'
+k8s_service_ip: '10.3.0.1'
+k8s_dns_service_ip: '10.3.0.10'
+k8s_cluster_domain: 'cluster.local'
+k8s_kubectl_cluster_name: 'default-cluster'
+
+k8s_adverstise_ip: "{{priv_ip}}"
+# Leave it blank if you're using flannel, otherwize use cni for Calico
+k8s_kublet_network_plugin: ''
+k8s_restart_kubelet: true
+k8s_kubelet_hostname: "{{inventory_hostname}}"
+
+# Enable master nodes as workers as well
+k8s_enable_scheduler_on_masters: true
+
+# SSL
+
+k8s_role_path: "roles/deimosfr.coreos-kubernetes"
+k8s_template_dir: "{{k8s_role_path}}/templates"
+k8s_ssl_local_path: "{{k8s_role_path}}/files/ssl/{{k8s_kubectl_cluster_name}}"
+k8s_ssl_api_server_path: "{{k8s_ssl_local_path}}/api_servers"
+k8s_ssl_workers_path: "{{k8s_ssl_local_path}}/workers"
+k8s_ssl_admin_path: "{{k8s_ssl_local_path}}/admins"
+
+k8s_ssl_bytes_encrypt: 2048
+k8s_ssl_ca_name: 'ca-key.pem'
+k8s_ssl_ca_pem_key_name: 'ca.pem'
+k8s_ssl_valid_days: 10000
+k8s_ssl_ca_pem_subj: '/CN=kube-ca'
+
+k8s_ssl_apiserver_key_pem_name: 'apiserver-key.pem'
+k8s_ssl_apiserver_csr_name: 'apiserver.csr'
+k8s_ssl_apiserver_subj: '/CN=kube-apiserver'
+k8s_ssl_apiserver_pem_name: 'apiserver.pem'
+k8s_ssl_apiserver_days: 10000
+
+k8s_openssl_config:
+  req:
+    req_extensions: 'v3_req'
+    distinguished_name: 'req_distinguished_name'
+  req_distinguished_name:
+  v3_req:
+    basicConstraints: 'CA:FALSE'
+    keyUsage: 'nonRepudiation, digitalSignature, keyEncipherment'
+    subjectAltName: '@alt_names'
+  alt_names:
+    DNS:
+      - kubernetes
+      - kubernetes.default
+      - kubernetes.default.svc
+      - "kubernetes.default.svc.{{k8s_cluster_domain}}"
+      - "*.myfqdn.com"
+    # Do not fulfil IP of master nodes, they'll be automatically generated
+    # from k8s-masters group
+    IP:
+      - "{{k8s_service_ip}}"
+
+k8s_workers_openssl_config:
+  req:
+    req_extensions: 'v3_req'
+    distinguished_name: 'req_distinguished_name'
+  req_distinguished_name:
+  v3_req:
+    basicConstraints: 'CA:FALSE'
+    keyUsage: 'nonRepudiation, digitalSignature, keyEncipherment'
+    subjectAltName: '@alt_names'
+  # Do not fulfil alt_names, it will automatically be generated
+  alt_names:
+
+k8s_kube_apiserver:
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: kube-apiserver
+    namespace: kube-system
+    labels:
+      app: apiserver
+  spec:
+    hostNetwork: true
+    containers:
+    - name: kube-apiserver
+      image: "quay.io/coreos/hyperkube:{{k8s_version}}"
+      command:
+      - /hyperkube
+      - apiserver
+      # If you don't want your API being reachable from outside:
+      # --bind-address={{priv_ip}}
+      - --bind-address=0.0.0.0
+      - --etcd-servers={{k8s_etcd_endpoints}}
+      - --allow-privileged=true
+      - --service-cluster-ip-range={{k8s_service_ip_range}}
+      - --secure-port=443
+      - --advertise-address={{k8s_adverstise_ip}}
+      # - --kubelet-preferred-address-types=ExternalDNS,ExternalIP,InternalDNS,Hostname,InternalIP,LegacyHostIP
+      - --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota
+      - --tls-cert-file=/etc/kubernetes/ssl/{{k8s_ssl_apiserver_pem_name}}
+      - --tls-private-key-file=/etc/kubernetes/ssl/{{k8s_ssl_apiserver_key_pem_name}}
+      - --client-ca-file=/etc/kubernetes/ssl/{{k8s_ssl_ca_pem_key_name}}
+      - --service-account-key-file=/etc/kubernetes/ssl/{{k8s_ssl_apiserver_key_pem_name}}
+      - --runtime-config=extensions/v1beta1=true,extensions/v1beta1/networkpolicies=true
+      livenessProbe:
+        httpGet:
+          host: 127.0.0.1
+          port: 8080
+          path: /healthz
+        initialDelaySeconds: 15
+        timeoutSeconds: 15
+      ports:
+      - containerPort: 443
+        hostPort: 443
+        name: https
+      - containerPort: 8080
+        hostPort: 8080
+        name: local
+      volumeMounts:
+      - mountPath: /etc/kubernetes/ssl
+        name: ssl-certs-kubernetes
+        readOnly: true
+      - mountPath: /etc/ssl/certs
+        name: ssl-certs-host
+        readOnly: true
+    volumes:
+    - hostPath:
+        path: /etc/kubernetes/ssl
+      name: ssl-certs-kubernetes
+    - hostPath:
+        path: /usr/share/ca-certificates
+      name: ssl-certs-host
+
+k8s_kube_proxy_masters:
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: kube-proxy
+    namespace: kube-system
+    annotations:
+      rkt.alpha.kubernetes.io/stage1-name-override: coreos.com/rkt/stage1-fly
+  spec:
+    hostNetwork: true
+    containers:
+    - name: kube-proxy
+      image: "quay.io/coreos/hyperkube:{{k8s_version}}"
+      command:
+      - /hyperkube
+      - proxy
+      - --master=http://127.0.0.1:8080
+      - --cluster-cidr={{k8s_pod_network}}
+      - --hostname-override={{ansible_hostname}}
+      - --bind-address={{priv_ip}}
+      - --proxy-mode=iptables
+      securityContext:
+        privileged: true
+      volumeMounts:
+      - mountPath: /etc/ssl/certs
+        name: "ssl-certs"
+      - mountPath: /etc/kubernetes/ssl
+        name: "etc-kube-ssl"
+        readOnly: true
+      - mountPath: /var/run/dbus
+        name: dbus
+        readOnly: false
+    volumes:
+    - name: "ssl-certs"
+      hostPath:
+        path: "/usr/share/ca-certificates"
+    - name: "etc-kube-ssl"
+      hostPath:
+        path: "/etc/kubernetes/ssl"
+    - hostPath:
+        path: /var/run/dbus
+      name: dbus
+
+k8s_kube_proxy_workers:
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: kube-proxy
+    namespace: kube-system
+    annotations:
+      rkt.alpha.kubernetes.io/stage1-name-override: coreos.com/rkt/stage1-fly
+  spec:
+    hostNetwork: true
+    containers:
+    - name: kube-proxy
+      image: "quay.io/coreos/hyperkube:{{k8s_version}}"
+      command:
+      - /hyperkube
+      - proxy
+      - --master=http://127.0.0.1:8080
+      - --cluster-cidr={{k8s_pod_network}}
+      - --hostname-override={{ansible_hostname}}
+      - --kubeconfig=/etc/kubernetes/worker-kubeconfig.yaml
+      - --bind-address={{priv_ip}}
+      - --proxy-mode=iptables
+      securityContext:
+        privileged: true
+      volumeMounts:
+      - mountPath: /etc/ssl/certs
+        name: "ssl-certs"
+      - mountPath: /etc/kubernetes/worker-kubeconfig.yaml
+        name: "kubeconfig"
+        readOnly: true
+      - mountPath: /etc/kubernetes/ssl
+        name: "etc-kube-ssl"
+        readOnly: true
+      - mountPath: /var/run/dbus
+        name: dbus
+        readOnly: false
+    volumes:
+    - name: "ssl-certs"
+      hostPath:
+        path: "/usr/share/ca-certificates"
+    - name: "kubeconfig"
+      hostPath:
+        path: "/etc/kubernetes/worker-kubeconfig.yaml"
+    - name: "etc-kube-ssl"
+      hostPath:
+        path: "/etc/kubernetes/ssl"
+    - hostPath:
+        path: /var/run/dbus
+      name: dbus
+
+k8s_kube_controller_manager:
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: kube-controller-manager
+    namespace: kube-system
+  spec:
+    hostNetwork: true
+    containers:
+    - name: kube-controller-manager
+      image: "quay.io/coreos/hyperkube:{{k8s_version}}"
+      command:
+      - /hyperkube
+      - controller-manager
+      - --master=http://127.0.0.1:8080
+      - --leader-elect=true
+      - --service-account-private-key-file=/etc/kubernetes/ssl/{{k8s_ssl_apiserver_key_pem_name}}
+      - --root-ca-file=/etc/kubernetes/ssl/{{k8s_ssl_ca_pem_key_name}}
+      livenessProbe:
+        httpGet:
+          host: 127.0.0.1
+          path: /healthz
+          port: 10252
+        initialDelaySeconds: 15
+        timeoutSeconds: 1
+      volumeMounts:
+      - mountPath: /etc/kubernetes/ssl
+        name: ssl-certs-kubernetes
+        readOnly: true
+      - mountPath: /etc/ssl/certs
+        name: ssl-certs-host
+        readOnly: true
+    volumes:
+    - hostPath:
+        path: /etc/kubernetes/ssl
+      name: ssl-certs-kubernetes
+    - hostPath:
+        path: /usr/share/ca-certificates
+      name: ssl-certs-host
+
+k8s_kube_scheduler:
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: kube-scheduler
+    namespace: kube-system
+  spec:
+    hostNetwork: true
+    containers:
+    - name: kube-scheduler
+      image: "quay.io/coreos/hyperkube:{{k8s_version}}"
+      command:
+      - /hyperkube
+      - scheduler
+      - --master=http://127.0.0.1:8080
+      - --leader-elect=true
+      livenessProbe:
+        httpGet:
+          host: 127.0.0.1
+          path: /healthz
+          port: 10251
+        initialDelaySeconds: 15
+        timeoutSeconds: 1
+
+k8s_worker_kubeconfig:
+  apiVersion: v1
+  kind: Config
+  clusters:
+  - name: local
+    cluster:
+      certificate-authority: /etc/kubernetes/ssl/ca.pem
+      server: "http://127.0.0.1:8080"
+  users:
+  - name: kubelet
+    user:
+      client-certificate: /etc/kubernetes/ssl/worker.pem
+      client-key: /etc/kubernetes/ssl/worker-key.pem
+  contexts:
+  - context:
+      cluster: local
+      user: kubelet
+    name: kubelet-context
+  current-context: kubelet-context
+
+# 3rd party apps
+
+k8s_dns_service:
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: kube-dns
+    namespace: kube-system
+    labels:
+      k8s-app: kube-dns
+      kubernetes.io/cluster-service: "true"
+      kubernetes.io/name: "KubeDNS"
+  spec:
+    selector:
+      k8s-app: kube-dns
+    clusterIP: "{{k8s_dns_service_ip}}"
+    ports:
+    - name: dns
+      port: 53
+      protocol: UDP
+    - name: dns-tcp
+      port: 53
+      protocol: TCP
+
+k8s_dns_deployment:
+  apiVersion: apps/v1beta1
+  kind: Deployment
+  metadata:
+    name: kube-dns
+    namespace: kube-system
+    labels:
+      k8s-app: kube-dns
+      kubernetes.io/cluster-service: "true"
+  spec:
+    strategy:
+      rollingUpdate:
+        maxSurge: 10%
+        maxUnavailable: 0
+    selector:
+      matchLabels:
+        k8s-app: kube-dns
+    template:
+      metadata:
+        labels:
+          k8s-app: kube-dns
+        annotations:
+          scheduler.alpha.kubernetes.io/critical-pod: ''
+          scheduler.alpha.kubernetes.io/tolerations: '[{"key":"CriticalAddonsOnly", "operator":"Exists"}]'
+      spec:
+        containers:
+          - name: kubedns
+            image: gcr.io/google_containers/kubedns-amd64:1.9
+            resources:
+              limits:
+                memory: 170Mi
+              requests:
+                cpu: 100m
+                memory: 70Mi
+            livenessProbe:
+              httpGet:
+                path: /healthz-kubedns
+                port: 8080
+                scheme: HTTP
+              initialDelaySeconds: 60
+              timeoutSeconds: 5
+              successThreshold: 1
+              failureThreshold: 5
+            readinessProbe:
+              httpGet:
+                path: /readiness
+                port: 8081
+                scheme: HTTP
+              initialDelaySeconds: 3
+              timeoutSeconds: 5
+            args:
+            - "--domain={{k8s_cluster_domain}}."
+            - --dns-port=10053
+            - --config-map=kube-dns
+            - --v=2
+            env:
+            - name: PROMETHEUS_PORT
+              value: "10055"
+            ports:
+            - containerPort: 10053
+              name: dns-local
+              protocol: UDP
+            - containerPort: 10053
+              name: dns-tcp-local
+              protocol: TCP
+            - containerPort: 10055
+              name: metrics
+              protocol: TCP
+          - name: dnsmasq
+            image: gcr.io/google_containers/kube-dnsmasq-amd64:1.4.1
+            livenessProbe:
+              httpGet:
+                path: /healthz-dnsmasq
+                port: 8080
+                scheme: HTTP
+              initialDelaySeconds: 60
+              timeoutSeconds: 5
+              successThreshold: 1
+              failureThreshold: 5
+            args:
+            - --cache-size=1000
+            - --no-resolv
+            - --server=127.0.0.1#10053
+            - --log-facility=-
+            ports:
+            - containerPort: 53
+              name: dns
+              protocol: UDP
+            - containerPort: 53
+              name: dns-tcp
+              protocol: TCP
+            # see: https://github.com/kubernetes/kubernetes/issues/29055 for details
+            resources:
+              requests:
+                cpu: 150m
+                memory: 10Mi
+          - name: dnsmasq-metrics
+            image: gcr.io/google_containers/dnsmasq-metrics-amd64:1.0.1
+            livenessProbe:
+              httpGet:
+                path: /metrics
+                port: 10054
+                scheme: HTTP
+              initialDelaySeconds: 60
+              timeoutSeconds: 5
+              successThreshold: 1
+              failureThreshold: 5
+            args:
+            - --v=2
+            - --logtostderr
+            ports:
+            - containerPort: 10054
+              name: metrics
+              protocol: TCP
+            resources:
+              requests:
+                memory: 10Mi
+          - name: healthz
+            image: gcr.io/google_containers/exechealthz-amd64:1.2
+            resources:
+              limits:
+                memory: 50Mi
+              requests:
+                cpu: 10m
+                memory: 50Mi
+            args:
+            - "--cmd=nslookup kubernetes.default.svc.{{k8s_cluster_domain}} 127.0.0.1 >/dev/null"
+            - --url=/healthz-dnsmasq
+            - "--cmd=nslookup kubernetes.default.svc.{{k8s_cluster_domain}} 127.0.0.1:10053 >/dev/null"
+            - --url=/healthz-kubedns
+            - --port=8080
+            - --quiet
+            ports:
+            - containerPort: 8080
+              protocol: TCP
+        dnsPolicy: Default
+
+k8s_dns_autoscaler:
+  apiVersion: apps/v1beta1
+  kind: Deployment
+  metadata:
+    name: kube-dns-autoscaler
+    namespace: kube-system
+    labels:
+      k8s-app: kube-dns-autoscaler
+      kubernetes.io/cluster-service: "true"
+  spec:
+    template:
+      metadata:
+        labels:
+          k8s-app: kube-dns-autoscaler
+        annotations:
+          scheduler.alpha.kubernetes.io/critical-pod: ''
+          scheduler.alpha.kubernetes.io/tolerations: '[{"key":"CriticalAddonsOnly", "operator":"Exists"}]'
+      spec:
+        containers:
+        - name: autoscaler
+          image: gcr.io/google_containers/cluster-proportional-autoscaler-amd64:1.0.0
+          resources:
+              requests:
+                  cpu: "20m"
+                  memory: "10Mi"
+          command:
+            - /cluster-proportional-autoscaler
+            - --namespace=kube-system
+            - --configmap=kube-dns-autoscaler
+            - --mode=linear
+            - --target=Deployment/kube-dns
+            - --default-params={"linear":{"coresPerReplica":256,"nodesPerReplica":16,"min":1}}
+            - --logtostderr=true
+            - --v=2
+k8s_heapster_deployment:
+  apiVersion: apps/v1beta1
+  kind: Deployment
+  metadata:
+    name: heapster
+    namespace: kube-system
+    labels:
+      k8s-app: heapster
+      kubernetes.io/cluster-service: "true"
+      version: "{{k8s_heapster_version}}"
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        k8s-app: heapster
+        version: "{{k8s_heapster_version}}"
+    template:
+      metadata:
+        labels:
+          k8s-app: heapster
+          version: "{{k8s_heapster_version}}"
+        annotations:
+          scheduler.alpha.kubernetes.io/critical-pod: ''
+          scheduler.alpha.kubernetes.io/tolerations: '[{"key":"CriticalAddonsOnly", "operator":"Exists"}]'
+      spec:
+        containers:
+          - image: "gcr.io/google_containers/heapster:{{k8s_heapster_version}}"
+            name: heapster
+            livenessProbe:
+              httpGet:
+                path: /healthz
+                port: 8082
+                scheme: HTTP
+              initialDelaySeconds: 180
+              timeoutSeconds: 5
+            command:
+              - /heapster
+              - --source=kubernetes.summary_api:''
+          - image: gcr.io/google_containers/addon-resizer:1.6
+            name: heapster-nanny
+            resources:
+              limits:
+                cpu: 50m
+                memory: 90Mi
+              requests:
+                cpu: 50m
+                memory: 90Mi
+            env:
+              - name: MY_POD_NAME
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.name
+              - name: MY_POD_NAMESPACE
+                valueFrom:
+                  fieldRef:
+                    fieldPath: metadata.namespace
+            command:
+              - /pod_nanny
+              - --cpu=80m
+              - --extra-cpu=4m
+              - --memory=200Mi
+              - --extra-memory=4Mi
+              - --threshold=5
+              - --deployment=heapster
+              - --container=heapster
+              - --poll-period=300000
+              - --estimator=exponential
+
+k8s_heapster_service:
+  kind: Service
+  apiVersion: v1
+  metadata:
+    name: heapster
+    namespace: kube-system
+    labels:
+      kubernetes.io/cluster-service: "true"
+      kubernetes.io/name: "Heapster"
+  spec:
+    ports:
+      - port: 80
+        targetPort: 8082
+    selector:
+      k8s-app: heapster
+
+k8s_dashboard_deployment:
+  kind: Deployment
+  apiVersion: apps/v1beta1
+  metadata:
+    labels:
+      k8s-app: kubernetes-dashboard
+    name: kubernetes-dashboard
+    namespace: kube-system
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        k8s-app: kubernetes-dashboard
+    template:
+      metadata:
+        labels:
+          k8s-app: kubernetes-dashboard
+        annotations:
+          scheduler.alpha.kubernetes.io/tolerations: |
+            [
+              {
+                "key": "dedicated",
+                "operator": "Equal",
+                "value": "master",
+                "effect": "NoSchedule"
+              }
+            ]
+      spec:
+        containers:
+        - name: kubernetes-dashboard
+          image: "gcr.io/google_containers/kubernetes-dashboard-amd64:v{{k8s_dashboard_version}}"
+          imagePullPolicy: Always
+          resources:
+            limits:
+              cpu: 100m
+              memory: 50Mi
+            requests:
+              cpu: 100m
+              memory: 50Mi
+          ports:
+          - containerPort: 9090
+            protocol: TCP
+          args:
+            # Uncomment the following line to manually specify Kubernetes API server Host
+            # If not specified, Dashboard will attempt to auto discover the API server and connect
+            # to it. Uncomment only if the default does not work.
+            # - --apiserver-host=http://my-address:port
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 9090
+            initialDelaySeconds: 30
+            timeoutSeconds: 30
+
+k8s_dashboard_service:
+  apiVersion: v1
+  kind: Service
+  metadata:
+    name: kubernetes-dashboard
+    namespace: kube-system
+    labels:
+      k8s-app: kubernetes-dashboard
+      kubernetes.io/cluster-service: "true"
+  spec:
+    selector:
+      k8s-app: kubernetes-dashboard
+    ports:
+    - port: 80
+      targetPort: 9090

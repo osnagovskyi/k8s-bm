@@ -1,0 +1,18 @@
+[local]
+localhost
+
+[coreos-masters]
+core01.toolsthatmatter.com  pub_ip=138.68.109.225 priv_ip=10.135.12.57
+
+[coreos-workers]
+core03.toolsthatmatter.com  pub_ip=207.154.243.211 priv_ip=10.135.52.214
+core02.toolsthatmatter.com pub_ip=207.154.223.3 priv_ip=10.135.25.115
+
+[coreos-nodes:children]
+coreos-masters
+coreos-workers
+
+[coreos-nodes:vars]
+ansible_ssh_user=core
+ansible_python_interpreter="/opt/python/bin/python"
+priv_if=eth1

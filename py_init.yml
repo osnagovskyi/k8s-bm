@@ -1,6 +1,6 @@
 ---
 - name: coreos-ansible
-  hosts: coreos
+  hosts: k8s-nodes
   user: core
   become: yes
   gather_facts: False
