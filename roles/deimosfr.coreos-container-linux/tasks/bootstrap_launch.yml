@@ -22,10 +22,20 @@
 - name: update cloud-init configuration
   command: >
     coreos-cloudinit -from-file /tmp/coreos_cloudinit.yml
+  register: cloudinit_update
+  async: 600
+  poll: 0
   when:
     - mounted_oem.rc == 0
     - coreos_bootstrap_cloudinit
     - config_updated.changed == True
+
+- name: Wait for cloudinit update to complete on all nodes
+  async_status: jid={{ cloudinit_update.ansible_job_id }}
+  register: update
+  until: update.finished
+  retries: 300
+
 
 - name: eject cdrom
   command: eject
