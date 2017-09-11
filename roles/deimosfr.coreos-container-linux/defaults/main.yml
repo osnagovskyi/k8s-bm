@@ -3,7 +3,7 @@
 # Choose CoreOS channel between stable, beta or alpha channels
 coreos_channel: "stable"
 # Generate a token: https://discovery.etcd.io/new?size=3
-coreos_token: "f9d59940bde911ef129c29e3c72a4e5f"
+coreos_token: "c6a1ae02f8e5fc4ca6313fa78099178e"
 # Choose reboot strategy between: etcd-lock, reboot and off
 coreos_reboot_strategy: "off"
 
