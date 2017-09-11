@@ -1,0 +1,26 @@
+[local]
+localhost
+
+[coreos-nodes]
+core01.toolsthatmatter.com  pub_ip=207.154.218.119 priv_ip=10.135.25.33
+core02.toolsthatmatter.com pub_ip=207.154.194.173 priv_ip=10.135.51.42
+core03.toolsthatmatter.com  pub_ip=207.154.206.7 priv_ip=10.135.6.89
+
+[k8s-masters]
+core01.toolsthatmatter.com  pub_ip=207.154.218.119 priv_ip=10.135.25.33
+
+[k8s-workers:children]
+coreos-nodes
+
+[k8s-nodes:children]
+k8s-masters
+k8s-workers
+
+[k8s-nodes:vars]
+ansible_ssh_user=core
+ansible_python_interpreter="/opt/python/bin/python"
+
+[coreos-nodes:vars]
+ansible_ssh_user=core
+ansible_python_interpreter="/opt/python/bin/python"
+priv_if=eth1
