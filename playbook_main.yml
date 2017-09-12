@@ -1,0 +1,149 @@
+---
+#########################
+# ANSIBLE PREREQUISITES #
+#########################
+- name: coreos-ansible pypy
+  hosts: localhost
+  gather_facts: False
+  tasks:
+    - include: roles/deimosfr.coreos-ansible/tasks/ansible_prerequisites.yml
+  vars:
+    ansible_python_interpreter: "/usr/bin/python"
+    coreos_ansible_role_path: "{{playbook_dir}}/roles/deimosfr.coreos-ansible"
+    python_version: 2
+    pypy_version: 5.8.0
+
+###############################
+# CoreOS install (if required)#
+###############################
+
+- name: coreos image offline mode
+  hosts: localhost
+  gather_facts: False
+  tasks:
+    - include: roles/deimosfr.coreos-ansible/tasks/coreos_offline_image.yml
+      when: coreos_image_offline
+  vars:
+    ansible_python_interpreter: "/usr/bin/python"
+    coreos_role_path: "{{playbook_dir}}/.."
+    coreos_image_offline: false
+    coreos_image_version: '1185.5.0'
+    coreos_image_name: 'coreos_production_image.bin.bz2'
+    coreos_image_src_url: "https://stable.release.core-os.net/amd64-usr/{{coreos_image_version}}"
+
+- name: coreos-ansible
+  hosts: coreos-nodes
+  remote_user: core
+  become: yes
+  gather_facts: False
+  roles:
+    - deimosfr.coreos-ansible
+  vars:
+    coreos_ansible_role_path: "{{playbook_dir}}/roles/deimosfr.coreos-ansible"
+
+- name: coreos-bootstrap
+  hosts: coreos-nodes
+  user: core
+  become: yes
+  roles:
+    - deimosfr.coreos-container-linux
+  vars:
+    coreos_image_base_url: "http://222.2.1.152:8000/coreos_images"
+    coreos_ansible_role_path: "{{playbook_dir}}/roles/deimosfr.coreos-ansible"
+
+#######################
+# K8S SSL CERTIFICATS #
+#######################
+
+- name: kubernetes ssl
+  hosts: localhost
+  gather_facts: False
+  become: no
+  tasks:
+    - include: roles/deimosfr.coreos-kubernetes/tasks/k8s_ssl_certs.yml
+  vars_files:
+    - roles/deimosfr.coreos-kubernetes/defaults/main.yml
+
+###############
+# K8S MASTERS #
+###############
+
+- name: check kubernetes etcd prerequisites and deploy kubernetes masters configs
+  hosts: k8s-masters
+  user: core
+  become: yes
+  tasks:
+    - include: roles/deimosfr.coreos-kubernetes/tasks/k8s_etcd.yml
+    - include: roles/deimosfr.coreos-kubernetes/tasks/k8s_master_nodes.yml
+  handlers:
+    - include: roles/deimosfr.coreos-kubernetes/handlers/main.yml
+  vars_files:
+    - roles/deimosfr.coreos-kubernetes/defaults/main.yml
+  vars:
+    k8s_restart_kubelet: true
+
+- name: configure kubernetes namespaces
+  hosts: k8s-masters[0]
+  user: core
+  become: yes
+  gather_facts: False
+  tasks:
+    - include: roles/deimosfr.coreos-kubernetes/tasks/k8s_namespaces.yml
+  vars_files:
+    - roles/deimosfr.coreos-kubernetes/defaults/main.yml
+
+- name: validate pods are downloading or present
+  hosts: k8s-masters
+  user: core
+  become: yes
+  gather_facts: False
+  tasks:
+    - include: roles/deimosfr.coreos-kubernetes/tasks/k8s_pods_checks.yml
+  vars_files:
+    - roles/deimosfr.coreos-kubernetes/defaults/main.yml
+
+###############
+# K8S WORKERS #
+###############
+
+- name: deploy kubernetes workers configs
+  hosts: k8s-workers
+  user: core
+  become: yes
+  tasks:
+    - include: roles/deimosfr.coreos-kubernetes/tasks/k8s_workers_nodes.yml
+  handlers:
+    - include: roles/deimosfr.coreos-kubernetes/handlers/main.yml
+  vars_files:
+    - roles/deimosfr.coreos-kubernetes/defaults/main.yml
+  vars:
+    k8s_restart_kubelet: true
+
+#####################
+# CONFIGURE KUBECTL #
+#####################
+
+- name: configure kubectl
+  hosts: k8s-nodes
+  user: core
+  become: yes
+  gather_facts: False
+  tasks:
+    - include: roles/deimosfr.coreos-kubernetes/tasks/k8s_kubectl_cfg.yml
+  vars_files:
+    - roles/deimosfr.coreos-kubernetes/defaults/main.yml
+
+######################
+# K8S 3RD PARTY APPS #
+######################
+
+- name: deploy 3rd party apps
+  hosts: k8s-masters[0]
+  user: core
+  gather_facts: False
+  tasks:
+    - include: roles/deimosfr.coreos-kubernetes/tasks/k8s_dns_addon.yml
+    - include: roles/deimosfr.coreos-kubernetes/tasks/k8s_heapster_addon.yml
+    - include: roles/deimosfr.coreos-kubernetes/tasks/k8s_dashboard.yml
+  vars_files:
+    - roles/deimosfr.coreos-kubernetes/defaults/main.yml
