@@ -3,7 +3,7 @@
 # Choose CoreOS channel between stable, beta or alpha channels
 coreos_channel: "stable"
 # Generate a token: https://discovery.etcd.io/new?size=3
-coreos_token: "c6a1ae02f8e5fc4ca6313fa78099178e"
+coreos_token: "b91ee49d42033a16b30dc38324d25617"
 # Choose reboot strategy between: etcd-lock, reboot and off
 coreos_reboot_strategy: "off"
 
@@ -22,7 +22,7 @@ coreos_image_src_url: "https://{{coreos_channel}}.release.core-os.net/amd64-usr/
 coreos_image_base_url: "https://{{coreos_channel}}.release.core-os.net/amd64-usr"
 
 # Set role path for local storage
-coreos_role_path: "{{playbook_dir}}/../../deimosfr.coreos-ansible"
+coreos_role_path: "{{playbook_dir}}/roles/deimosfr.coreos-ansible"
 
 # Define your public interface and IP
 coreos_public_ip: "{{ansible_default_ipv4.address}}"
