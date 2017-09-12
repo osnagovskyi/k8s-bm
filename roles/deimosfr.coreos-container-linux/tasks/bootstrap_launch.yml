@@ -35,6 +35,7 @@
   register: update
   until: update.finished
   retries: 300
+  when: cloudinit_update.changed
 
 
 - name: eject cdrom
