@@ -23,8 +23,8 @@
 {% endfor %}
 {% set count_ssl = k|length %}
 {% for value in groups['k8s-masters']|map('extract', hostvars, ['priv_ip'])|list|sort %}
-  {{k}}.{{count_ssl}} = {{lookup('dig', value)}}
-  {#{{k}}.{{count_ssl}} = {{value}}#}
+  {#{{k}}.{{count_ssl}} = {{lookup('dig', value)}}#}
+  {{k}}.{{count_ssl}} = {{value}}
 {% set count_ssl = count_ssl + 1 %}
 {% endfor %}
 {% else %}
