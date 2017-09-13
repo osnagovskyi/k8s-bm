@@ -22,7 +22,7 @@ coreos_image_src_url: "https://{{coreos_channel}}.release.core-os.net/amd64-usr/
 coreos_image_base_url: "https://{{coreos_channel}}.release.core-os.net/amd64-usr"
 
 # Set role path for local storage
-coreos_role_path: "{{playbook_dir}}/roles/deimosfr.coreos-ansible"
+coreos_role_path: "{{playbook_dir}}/roles/deimosfr.coreos-container-linux"
 
 # Define your public interface and IP
 coreos_public_ip: "{{ansible_default_ipv4.address}}"
