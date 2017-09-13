@@ -1,3 +1,4 @@
+roles/deimosfr.coreos-ansible/files/*
 roles/deimosfr.coreos-container-linux/files/*
 roles/deimosfr.coreos-kubernetes/files/*
 kubectl_cfg.sh
