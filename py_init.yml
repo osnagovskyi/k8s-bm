@@ -1,9 +1,0 @@
----
-- name: coreos-ansible
-  hosts: k8s-nodes
-  user: core
-  become: yes
-  gather_facts: False
-  serial: 1
-  roles:
-    - ansible-coreos-ansible

@@ -1,3 +1,0 @@
-[submodule "roles/ansible-coreos-ansible"]
-	path = roles/ansible-coreos-ansible
-	url = https://github.com/osnagovskyi/ansible-coreos-ansible.git
