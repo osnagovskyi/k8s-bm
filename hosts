@@ -19,6 +19,8 @@ k8s-workers
 [k8s-nodes:vars]
 ansible_ssh_user=core
 ansible_python_interpreter="/opt/python/bin/python"
+k8s_master_host="core01.toolsthatmatter.com"
+k8s_kubectl_cluster_name="default-cluster"
 
 [coreos-nodes:vars]
 ansible_ssh_user=core
