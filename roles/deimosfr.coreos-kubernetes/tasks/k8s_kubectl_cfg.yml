@@ -39,6 +39,16 @@
     - "kubectl config use-context {{k8s_kubectl_cluster_name}}"
   delegate_to: localhost
 
+- name: create kubectl configuration scrit
+  local_action:
+    module: template
+    src: "{{k8s_template_dir}}/kubectl_cfg.j2"
+    dest: "{{ playbook_dir}}/kubectl_cfg.sh"
+    mode: 0755
+  run_once: true
+  become: no
+  tags: kub_cfg
+
 - name: get cluster node list
   shell: 'kubectl get nodes | grep -c Ready'
   register: kubectl_result
