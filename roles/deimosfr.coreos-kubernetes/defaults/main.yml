@@ -106,6 +106,7 @@ k8s_kube_apiserver:
       - --service-cluster-ip-range={{k8s_service_ip_range}}
       - --secure-port=443
       - --advertise-address={{k8s_adverstise_ip}}
+      - --kubelet-preferred-address-types=InternalIP,Hostname,ExternalIP
       # - --kubelet-preferred-address-types=ExternalDNS,ExternalIP,InternalDNS,Hostname,InternalIP,LegacyHostIP
       - --admission-control=NamespaceLifecycle,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota
       - --tls-cert-file=/etc/kubernetes/ssl/{{k8s_ssl_apiserver_pem_name}}
