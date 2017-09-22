@@ -1,0 +1,59 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: nginx-poc
+
+spec:
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: nginx-poc
+    spec:
+      containers:
+      - name: web
+        image: nginx
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 80
+        volumeMounts:
+        - mountPath: /usr/share/nginx/html/
+          name: test-volume
+      volumes:
+      - name: test-volume
+        hostPath:
+          # directory location on host
+          path: /data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-poc-svc
+  labels:
+    app: web-demo
+spec:
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+  selector:
+    app: nginx-poc
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: nginx-poc-ingress
+  labels:
+    app: web-demo
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+spec:
+  rules:
+  - host: cluster.toolsthatmatter.com
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: nginx-poc-svc
+          servicePort: 80
