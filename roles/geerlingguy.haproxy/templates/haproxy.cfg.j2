@@ -53,5 +53,5 @@ backend {{ haproxy_backend_name }}
     cookie SERVERID insert indirect
 {% for backend in haproxy_backend_servers %}
     {#server {{ backend.name }} {{ backend.address }} cookie {{ backend.name }} check#}
-    server {{ backend.name }} {{ backend.address }} check inter 10000
+    server {{ backend.name }} {{ backend.address }} check fall 3 rise 2
 {% endfor %}
