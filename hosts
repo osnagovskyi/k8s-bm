@@ -2,12 +2,12 @@
 localhost
 
 [coreos-nodes]
-core01.toolsthatmatter.com  pub_ip=165.227.133.199 priv_ip=10.135.1.96
-core02.toolsthatmatter.com  pub_ip=138.197.189.247 priv_ip=10.135.18.78
-core03.toolsthatmatter.com  pub_ip=138.197.179.107 priv_ip=10.135.30.126
+core01.toolsthatmatter.com  pub_ip=165.227.175.163 priv_ip=10.135.34.247
+core02.toolsthatmatter.com  pub_ip=165.227.175.167 priv_ip=10.135.36.62
+core03.toolsthatmatter.com  pub_ip=165.227.168.211 priv_ip=10.135.37.53
 
 [k8s-masters]
-core01.toolsthatmatter.com  pub_ip=165.227.133.199 priv_ip=10.135.1.96
+core01.toolsthatmatter.com  pub_ip=165.227.175.163 priv_ip=10.135.34.247
 
 [k8s-workers:children]
 coreos-nodes
