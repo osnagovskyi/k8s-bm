@@ -254,6 +254,7 @@ k8s_kube_controller_manager:
       - --leader-elect=true
       - --service-account-private-key-file=/etc/kubernetes/ssl/{{k8s_ssl_apiserver_key_pem_name}}
       - --root-ca-file=/etc/kubernetes/ssl/{{k8s_ssl_ca_pem_key_name}}
+      - --pod-eviction-timeout=30s
       livenessProbe:
         httpGet:
           host: 127.0.0.1
