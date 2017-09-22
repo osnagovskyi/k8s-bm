@@ -1,0 +1,20 @@
+---
+- hosts: k8s-workers
+  user: core
+  become: yes
+  tasks:
+    - name: create /data dir
+      file:
+        path: /data
+        state: directory
+        mode: 0755
+    - name: create static htlm file for demo app
+      copy:
+        dest: /data/index.html
+        content: |
+          "{{ inventory_hostname }}"
+    - name: deply demo app to kubernetes
+      become: no
+      local_action: command kubectl apply -f demo.yml
+      run_once: true
+      ignore_errors: true
