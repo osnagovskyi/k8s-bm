@@ -3,8 +3,8 @@
 - name: create /opt/bin folder
   file:
     path: '/opt/bin'
-    owner: core
-    group: core
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
     mode: 0755
     state: directory
 
@@ -24,20 +24,21 @@
     url: "https://storage.googleapis.com/kubernetes-release/release/{{k8s_kubectl_version}}/bin/linux/amd64/kubectl"
     dest: "/opt/bin/kubectl"
     mode: 0755
-    owner: core
-    group: core
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
     force: yes
   when: kubectl.stat.exists == False or kubectl_version.stdout != k8s_kubectl_version
 
 - name: configure your workstation kubectl with this lines
-  debug:
-    msg: "{{item}}"
+  shell: "{{item}}"
   with_items:
     - "kubectl config set-cluster {{k8s_kubectl_cluster_name}} --server=https://{{k8s_master_host}} --certificate-authority={{k8s_ssl_api_server_path}}/{{k8s_ssl_ca_pem_key_name}}"
     - "kubectl config set-credentials default-admin --certificate-authority={{k8s_ssl_api_server_path}}/{{k8s_ssl_ca_pem_key_name}} --client-key={{k8s_ssl_admin_path}}/admin-key.pem --client-certificate={{k8s_ssl_admin_path}}/admin.pem"
     - "kubectl config set-context {{k8s_kubectl_cluster_name}} --cluster={{k8s_kubectl_cluster_name}} --user=default-admin"
     - "kubectl config use-context {{k8s_kubectl_cluster_name}}"
   delegate_to: localhost
+  become: no
+  run_once: true
 
 - name: create kubectl configuration scrit
   local_action:
