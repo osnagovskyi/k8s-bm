@@ -6,8 +6,8 @@ core01.toolsthatmatter.com  pub_ip=165.227.175.163 priv_ip=10.135.34.247
 core02.toolsthatmatter.com  pub_ip=165.227.175.167 priv_ip=10.135.36.62
 core03.toolsthatmatter.com  pub_ip=165.227.168.211 priv_ip=10.135.37.53
 
-[k8s-masters]
-core01.toolsthatmatter.com  pub_ip=165.227.175.163 priv_ip=10.135.34.247
+[k8s-masters:children]
+coreos-nodes
 
 [k8s-workers:children]
 coreos-nodes
@@ -28,7 +28,7 @@ k8s_kubectl_cluster_name="default-cluster"
 [coreos-nodes:vars]
 ansible_ssh_user=core
 ansible_python_interpreter="/opt/python/bin/python"
-coreos_token="15e3e81d6d62d5873fda3c59a667bf51"
+coreos_token="c82b26bed7766bbf305ceb83715e0a9b"
 priv_if=eth1
 
 [balancer:vars]
