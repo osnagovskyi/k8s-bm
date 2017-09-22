@@ -4,10 +4,10 @@
   vars:
     - haproxy_backend_servers:
       - name: core01.toolsthatmatter.com
-        address: 165.227.133.199:31989
+        address: 165.227.175.163:{{ ingress_port }}
       - name: core02.toolsthatmatter.com
-        address: 138.197.189.247:31989
+        address: 165.227.175.167:{{ ingress_port }}
       - name: core03.toolsthatmatter.com
-        address: 138.197.179.107:31989
+        address: 165.227.168.211:{{ ingress_port }}
   roles:
     - geerlingguy.haproxy
