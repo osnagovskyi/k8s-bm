@@ -38,6 +38,7 @@
     - "kubectl config use-context {{k8s_kubectl_cluster_name}}"
   delegate_to: localhost
   become: no
+  ignore_errors: yes
   run_once: true
 
 - name: create kubectl configuration scrit

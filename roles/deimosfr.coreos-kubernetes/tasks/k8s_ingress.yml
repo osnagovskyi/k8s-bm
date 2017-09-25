@@ -1,0 +1,12 @@
+---
+
+- name: generate k8s nginx-ingress service and deployment files
+  template:
+    src: "nginx-ingress.j2"
+    dest: "/tmp/nginx-ingress.yml"
+    mode: 0644
+
+- name: create k8s nginx-ingress service and deployment
+  command: "/opt/bin/kubectl apply -f /tmp/nginx-ingress.yml"
+  changed_when: false
+  ignore_errors: yes

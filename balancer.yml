@@ -13,10 +13,3 @@
         address: 165.227.168.211:{{ ingress_port }}
   roles:
     - geerlingguy.haproxy
-  tasks:
-    - name: install nginx-ingress
-      shell: helm upgrade --install demo stable/nginx-ingress --set controller.service.type=NodePort,controller.service.nodePorts.http={{ ingress_port }}
-      run_once: true
-      ignore_errors: true
-      delegate_to: localhost
-      become: no

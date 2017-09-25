@@ -145,5 +145,6 @@
     - include: roles/deimosfr.coreos-kubernetes/tasks/k8s_dns_addon.yml
     - include: roles/deimosfr.coreos-kubernetes/tasks/k8s_heapster_addon.yml
     - include: roles/deimosfr.coreos-kubernetes/tasks/k8s_dashboard.yml
+    - include: roles/deimosfr.coreos-kubernetes/tasks/k8s_ingress.yml
   vars_files:
     - roles/deimosfr.coreos-kubernetes/defaults/main.yml
