@@ -2,7 +2,7 @@
 
 - name: generate k8s nginx-ingress service and deployment files
   template:
-    src: "nginx-ingress.j2"
+    src: "{{k8s_template_dir}}/nginx-ingress.j2"
     dest: "/tmp/nginx-ingress.yml"
     mode: 0644
 
