@@ -2,6 +2,7 @@
 - hosts: balancer
   become: yes
   vars:
+    - nfs_exports: ["/var/pub/www 165.227.175.0/24(rw,sync,no_root_squash,insecure)"]
     - haproxy_dns_name: "{{ inventory_hostname }}"
     - ingress_port: 30987
     - haproxy_backend_servers:
@@ -13,3 +14,10 @@
         address: 165.227.168.211:{{ ingress_port }}
   roles:
     - geerlingguy.haproxy
+    - geerlingguy.nfs
+  tasks:
+    - name: create example index.html file
+      copy:
+        dest: /var/pub/www/index.html
+        content: "Foo\n"
+        mode: 0755
