@@ -22,9 +22,8 @@ spec:
           name: test-volume
       volumes:
       - name: test-volume
-        hostPath:
-          # directory location on host
-          path: /data
+        persistentVolumeClaim:
+          claimName: demo-nfs
 ---
 apiVersion: v1
 kind: Service
