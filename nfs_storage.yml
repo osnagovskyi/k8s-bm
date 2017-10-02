@@ -1,0 +1,12 @@
+---
+- hosts: balancer
+  vars:
+    - nfs_exports: ["/var/pub/www 165.227.175.0/24(rw,sync,no_root_squash,insecure)"]
+  roles:
+    - geerlingguy.nfs
+  tasks:
+    - name: create example file
+      copy:
+        dest: /var/pub/www/index.html
+        content: "Foo\n"
+        mode: 0755
