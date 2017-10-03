@@ -2,7 +2,7 @@
 - hosts: balancer
   become: yes
   vars:
-    - nfs_exports: ["/var/pub/www 165.227.175.0/24(rw,sync,no_root_squash,insecure)"]
+    - nfs_exports: ["/var/pub/www 165.227.0.0/16(rw,sync)"]
     - haproxy_dns_name: "{{ inventory_hostname }}"
     - ingress_port: 30987
     - haproxy_backend_servers:
@@ -16,8 +16,16 @@
     - geerlingguy.haproxy
     - geerlingguy.nfs
   tasks:
-    - name: create example index.html file
+    - name: ensure proper permissins for export dir
+      file:
+        path: /var/pub/www/
+        state: directory
+        owner: nobody
+        group: nogroup
+    - name: create example file
       copy:
         dest: /var/pub/www/index.html
         content: "Foo\n"
         mode: 0755
+        owner: nobody
+        group: nogroup
