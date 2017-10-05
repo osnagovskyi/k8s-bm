@@ -2,7 +2,8 @@
 - hosts: balancer
   become: yes
   vars:
-    - nfs_exports: ["/var/pub/www 165.227.0.0/16(rw,sync)"]
+    - clients: "{{ groups['k8s-nodes'] | map('extract', hostvars, ['pub_ip']) | join(' ') }}"
+    - nfs_exports: ["/var/pub/www {{ clients }}"]
     - haproxy_dns_name: "{{ inventory_hostname }}"
     - ingress_port: 30987
     - haproxy_backend_servers:
@@ -29,3 +30,6 @@
         mode: 0755
         owner: nobody
         group: nogroup
+    - debug:
+        var: clients
+      tags: debug
